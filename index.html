@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Website Peminjaman Buku</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    #search-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      width: 50%;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 90%;
+      margin: 0 auto;
+    }
+
+    th, td {
+      border: 1px solid #999;
+      padding: 8px 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #007BFF;
+      color: white;
+    }
+
+    tbody tr:hover {
+      background-color: #e9ecef;
+    }
+
+    .no-data {
+      text-align: center;
+      margin-top: 20px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Website Peminjaman Buku</h1>
+  
+  <div id="search-container">
+    <input type="text" id="search-input" placeholder="Cari buku (min. 3 huruf)...">
+  </div>
+
+  <table id="data-table">
+    <thead>
+      <tr>
+        <th>Id_Buku</th>
+        <th>Judul</th>
+        <th>Penulis</th>
+        <th>Penerbit</th>
+        <th>Tahun</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="no-data" id="no-data" style="display: none;">Data tidak ditemukan.</div>
+
+  <script>
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1NHacAfv_atNVqfXI5M019PtW-54SB6I4untSRZfV_Io/gviz/tq?tqx=out:json&sheet=Sheet1';
+    let allBooks = [];
+
+    async function fetchBooksIfNeeded() {
+      if (allBooks.length === 0) {
+        try {
+          const response = await fetch(SHEET_URL);
+          const text = await response.text();
+          const json = JSON.parse(text.substr(47).slice(0, -2));
+          const rows = json.table.rows;
+
+          allBooks = rows.map(row => ({
+            id: row.c[0]?.v || '',
+            judul: row.c[1]?.v || '',
+            penulis: row.c[2]?.v || '',
+            penerbit: row.c[3]?.v || '',
+            tahun: row.c[4]?.v || ''
+          }));
+        } catch (error) {
+          console.error('Gagal mengambil data:', error);
+          alert('Terjadi kesalahan saat mengambil data buku.');
+        }
+      }
+    }
+
+    function displayBooks(books) {
+      const tableBody = document.querySelector('#data-table tbody');
+      const noData = document.getElementById('no-data');
+      tableBody.innerHTML = '';
+
+      if (books.length === 0) {
+        noData.style.display = 'block';
+        return;
+      }
+
+      noData.style.display = 'none';
+
+      books.forEach(book => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${book.id}</td>
+          <td>${book.judul}</td>
+          <td>${book.penulis}</td>
+          <td>${book.penerbit}</td>
+          <td>${book.tahun}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    document.getElementById('search-input').addEventListener('input', async function () {
+      const query = this.value.toLowerCase();
+      if (query.length >= 3) {
+        await fetchBooksIfNeeded();
+        const filteredBooks = allBooks.filter(book =>
+          book.id.toLowerCase().includes(query) ||
+          book.judul.toLowerCase().includes(query) ||
+          book.penulis.toLowerCase().includes(query) ||
+          book.penerbit.toLowerCase().includes(query) ||
+          book.tahun.toString().includes(query)
+        );
+        displayBooks(filteredBooks);
+      } else {
+        // Kosongkan tabel jika kurang dari 3 huruf
+        displayBooks([]);
+      }
+    });
+  </script>
+</body>
+</html>
